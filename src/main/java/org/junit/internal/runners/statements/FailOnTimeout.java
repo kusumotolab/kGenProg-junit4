@@ -10,6 +10,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.junit.experimental.KgpGlobalConfig;
 import org.junit.runners.model.MultipleFailureException;
 import org.junit.runners.model.Statement;
 import org.junit.runners.model.TestTimedOutException;
@@ -44,8 +45,13 @@ public class FailOnTimeout extends Statement {
 
     private FailOnTimeout(Builder builder, Statement statement) {
         originalStatement = statement;
-        timeout = builder.timeout;
-        timeUnit = builder.unit;
+
+        // [kgp]
+        // Force override timeout fields from KgpGlobalConfig object
+        // timeout = builder.timeout;
+        // timeUnit = builder.unit;
+        timeout = org.junit.experimental.KgpGlobalConfig.timeout;
+        timeUnit = org.junit.experimental.KgpGlobalConfig.timeUnit;
         lookForStuckThread = builder.lookForStuckThread;
     }
 
@@ -126,6 +132,12 @@ public class FailOnTimeout extends Statement {
         callable.awaitStarted();
         Throwable throwable = getResult(task, thread);
         if (throwable != null) {
+            // [kgp]
+            // Force terminate the timed out thread.
+            // Note that thread.stop() must be called BEFORE threadGroup.stop() 
+            thread.stop();
+            threadGroup.stop();
+
             throw throwable;
         }
     }
