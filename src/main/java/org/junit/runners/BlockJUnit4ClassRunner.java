@@ -287,7 +287,10 @@ public class BlockJUnit4ClassRunner extends ParentRunner<FrameworkMethod> {
      * Returns a {@link Statement} that invokes {@code method} on {@code test}
      */
     protected Statement methodInvoker(FrameworkMethod method, Object test) {
-        return new InvokeMethod(method, test);
+        // [kgp]
+        // Always use FailOnTimeout as default statement which applies timeout for each test.
+        //return new InvokeMethod(method, test);
+        return FailOnTimeout.builder().build(new InvokeMethod(method, test));
     }
 
     /**
