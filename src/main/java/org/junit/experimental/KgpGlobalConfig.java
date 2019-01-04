@@ -23,7 +23,7 @@ public class KgpGlobalConfig {
     private static Map<Long, KgpDuration> timeoutMap;
 
     static {
-        timeoutMap = new HashMap<>();
+        timeoutMap = new HashMap<Long, KgpDuration>();
     }
 
     public static void setTimeout(long timeout, TimeUnit timeUnit) {
