@@ -44,13 +44,8 @@ public class FailOnTimeout extends Statement {
 
     private FailOnTimeout(Builder builder, Statement statement) {
         originalStatement = statement;
-
-        // [kgp]
-        // Force override timeout fields from KgpGlobalConfig object
-        // timeout = builder.timeout;
-        // timeUnit = builder.unit;
-        timeout = org.junit.experimental.KgpGlobalConfig.timeout;
-        timeUnit = org.junit.experimental.KgpGlobalConfig.timeUnit;
+        timeout = builder.timeout;
+        timeUnit = builder.unit;
         lookForStuckThread = builder.lookForStuckThread;
     }
 
@@ -131,6 +126,11 @@ public class FailOnTimeout extends Statement {
         callable.awaitStarted();
         Throwable throwable = getResult(task, thread);
         if (throwable != null) {
+            // [kgp]
+            // Force terminate the timed out thread.
+            thread.stop();
+            threadGroup.stop();
+
             throw throwable;
         }
     }
@@ -164,10 +164,6 @@ public class FailOnTimeout extends Statement {
         if (stackTrace != null) {
             currThreadException.setStackTrace(stackTrace);
             thread.interrupt();
-
-            // [kgp]
-            // Force terminate the timed out thread.
-            thread.stop();
         }
         if (stuckThread != null) {
             Exception stuckThreadException = 

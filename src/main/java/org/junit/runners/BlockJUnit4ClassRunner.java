@@ -13,6 +13,8 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.Test.None;
+import org.junit.experimental.KgpDuration;
+import org.junit.experimental.KgpGlobalConfig;
 import org.junit.internal.runners.model.ReflectiveCallable;
 import org.junit.internal.runners.statements.ExpectException;
 import org.junit.internal.runners.statements.Fail;
@@ -290,7 +292,11 @@ public class BlockJUnit4ClassRunner extends ParentRunner<FrameworkMethod> {
         // [kgp]
         // Always use FailOnTimeout as default statement which applies timeout for each test.
         //return new InvokeMethod(method, test);
-        return FailOnTimeout.builder().build(new InvokeMethod(method, test));
+        final KgpDuration duration = KgpGlobalConfig.getTimeout();
+        return FailOnTimeout
+                .builder()
+                .withTimeout(duration.timeout, duration.timeUnit)
+                .build(new InvokeMethod(method, test));
     }
 
     /**

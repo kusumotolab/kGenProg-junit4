@@ -9,6 +9,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.junit.experimental.KgpDuration;
 import org.junit.experimental.KgpGlobalConfig;
 
 
@@ -165,7 +166,6 @@ public abstract class TestCase extends Assert implements Test {
      * @throws Throwable if any exception is thrown
      */
     protected void runTest() throws Throwable {
-        System.out.println("!!!!!!!!aa");
         assertNotNull("TestCase.fName cannot be null", fName); // Some VMs crash when calling getMethod(null,null);
         Method runMethod = null;
         try {
@@ -205,13 +205,16 @@ public abstract class TestCase extends Assert implements Test {
             // [kgp]
             // Force terminate the timed out thread.
             thread.stop();
+            threadGroup.stop();
+
             throw throwable;
         }
     }
 
     private Throwable getResult(FutureTask<Throwable> task, Thread thread) {
-        long timeout = KgpGlobalConfig.timeout;
-        TimeUnit timeUnit = KgpGlobalConfig.timeUnit;
+        final KgpDuration duration = KgpGlobalConfig.getTimeout();
+        final long timeout = duration.timeout;
+        final TimeUnit timeUnit = duration.timeUnit;
         try {
             if (timeout > 0) {
                 return task.get(timeout, timeUnit);

@@ -1,6 +1,8 @@
 package org.junit.runner;
 
+import java.util.concurrent.TimeUnit;
 import junit.runner.Version;
+import org.junit.experimental.KgpGlobalConfig;
 import org.junit.internal.JUnitSystem;
 import org.junit.internal.RealSystem;
 import org.junit.internal.TextListener;
@@ -82,6 +84,12 @@ public class JUnitCore {
      */
     public String getVersion() {
         return Version.id();
+    }
+
+    // [kgp]
+    // Register timeout settings to KgpGlobalConfig
+    public void setTimeout(final long timeout, final TimeUnit timeUnit) {
+        KgpGlobalConfig.setTimeout(timeout, timeUnit);
     }
 
     /**
