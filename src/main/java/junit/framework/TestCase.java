@@ -1,8 +1,16 @@
 package junit.framework;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import org.junit.experimental.KgpGlobalConfig;
+
 
 /**
  * A test case defines the fixture to run multiple tests. To define a test case<br/>
@@ -157,6 +165,7 @@ public abstract class TestCase extends Assert implements Test {
      * @throws Throwable if any exception is thrown
      */
     protected void runTest() throws Throwable {
+        System.out.println("!!!!!!!!aa");
         assertNotNull("TestCase.fName cannot be null", fName); // Some VMs crash when calling getMethod(null,null);
         Method runMethod = null;
         try {
@@ -172,17 +181,70 @@ public abstract class TestCase extends Assert implements Test {
             fail("Method \"" + fName + "\" should be public");
         }
 
-        try {
-            runMethod.invoke(this);
-        } catch (InvocationTargetException e) {
-            e.fillInStackTrace();
-            throw e.getTargetException();
-        } catch (IllegalAccessException e) {
-            e.fillInStackTrace();
-            throw e;
+//        try {
+//            runMethod.invoke(this);
+//        } catch (InvocationTargetException e) {
+//            e.fillInStackTrace();
+//            throw e.getTargetException();
+//        } catch (IllegalAccessException e) {
+//            e.fillInStackTrace();
+//            throw e;
+//        }
+
+        // [kgp]
+        // Custom executon to apply timeout
+        CallableStatement callable = new CallableStatement(runMethod);
+        FutureTask<Throwable> task = new FutureTask<Throwable>(callable);
+        ThreadGroup threadGroup = new ThreadGroup("TestCaseGroup");
+        Thread thread = new Thread(threadGroup, task, "Time-limited test");
+        thread.setDaemon(true);
+        thread.start();
+        callable.awaitStarted();
+        Throwable throwable = getResult(task, thread);
+        if (throwable != null) {
+            // [kgp]
+            // Force terminate the timed out thread.
+            thread.stop();
+            throw throwable;
         }
     }
 
+    private Throwable getResult(FutureTask<Throwable> task, Thread thread) {
+        long timeout = KgpGlobalConfig.timeout;
+        TimeUnit timeUnit = KgpGlobalConfig.timeUnit;
+        try {
+            if (timeout > 0) {
+                return task.get(timeout, timeUnit);
+            } else {
+                return task.get();
+            }
+        } catch (InterruptedException e) {
+            return e; // caller will re-throw; no need to call Thread.interrupt()
+        } catch (ExecutionException e) {
+            // test failed; have caller re-throw the exception thrown by the test
+            return e.getCause();
+        } catch (TimeoutException e) {
+            return e; //createTimeoutException(thread);
+        }
+    }
+
+    private class CallableStatement implements Callable<Throwable> {
+        private final CountDownLatch startLatch = new CountDownLatch(1);
+        private final Method runMethod;
+        public CallableStatement(Method runMethod) {
+            this.runMethod = runMethod;
+        }
+
+        @Override
+        public Throwable call() throws Exception {
+            startLatch.countDown();
+            runMethod.invoke(TestCase.this);
+            return null;
+        }
+        public void awaitStarted() throws InterruptedException {
+            startLatch.await();
+        }
+    }
     /**
      * Asserts that a condition is true. If it isn't it throws
      * an AssertionFailedError with the given message.
