@@ -132,12 +132,6 @@ public class FailOnTimeout extends Statement {
         callable.awaitStarted();
         Throwable throwable = getResult(task, thread);
         if (throwable != null) {
-            // [kgp]
-            // Force terminate the timed out thread.
-            // Note that thread.stop() must be called BEFORE threadGroup.stop() 
-            thread.stop();
-            threadGroup.stop();
-
             throw throwable;
         }
     }
@@ -171,6 +165,10 @@ public class FailOnTimeout extends Statement {
         if (stackTrace != null) {
             currThreadException.setStackTrace(stackTrace);
             thread.interrupt();
+
+            // [kgp]
+            // Force terminate the timed out thread.
+            thread.stop();
         }
         if (stuckThread != null) {
             Exception stuckThreadException = 
